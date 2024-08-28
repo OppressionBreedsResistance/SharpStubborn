@@ -11,12 +11,9 @@ namespace DesktopShortcutsLister
         static void Main(string[] args)
         {
             string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-            string publicDesktopPath = @"C:\Users\Public\Desktop";
-
             List<string> shortcutFiles = new List<string>();
-
             shortcutFiles.AddRange(Directory.GetFiles(desktopPath, "*.lnk"));
-            shortcutFiles.AddRange(Directory.GetFiles(publicDesktopPath, "*.lnk"));
+  
             
             // Check if two arguments
             if (args.Length < 2)
@@ -66,11 +63,13 @@ namespace DesktopShortcutsLister
                 shortcut.Arguments = newaArgument;
                 if (oldlocation.StartsWith(","))
                 {
+                    Console.WriteLine("Icon location to: " + oldlocation);
                     Console.WriteLine("Zostawiamy target path");
                     shortcut.IconLocation = shortcut.TargetPath;
                 }
                 else
                 {
+                    Console.WriteLine("Icon location to: " + oldlocation);
                     Console.WriteLine("Dajemy old location");
                     shortcut.IconLocation = oldlocation;
                 }
