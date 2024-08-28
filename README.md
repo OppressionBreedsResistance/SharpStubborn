@@ -5,6 +5,6 @@ The program is designed to achieve persistence on Windows systems by modifying .
 
 ## Usage
 ```
-,.\SharpStubborn.exe [lnk you wish to modify] [persistence command]
+.\SharpStubborn.exe [lnk you wish to modify] [persistence command]
 ```
 
